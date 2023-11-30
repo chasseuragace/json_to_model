@@ -53,16 +53,15 @@ String _defaultJsonTemplate({
 
   if (!isNested) {
     template += '''
-import 'package:flutter/foundation.dart';
-import 'package:quiver/core.dart';
+
 $imports
-import '${indexPathPrefix}index.dart';
+
 
 ''';
   }
 
   template += '''
-@immutable
+
 class $className${extendsClass != null ? ' extends $extendsClass ' : ''}${mixinClass.isNotEmpty ? ' with $mixinClass' : ''} {
 
 $constructor
