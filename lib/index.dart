@@ -37,24 +37,55 @@ class JsonModelRunner {
     Directory(_srcDir).listSync(recursive: true).forEach((f) {
       if (FileSystemEntity.isFileSync(f.path)) {
         const fileExtension = '.json';
+        const fileConfigExtension = '.config';
+
         if (f.path.endsWith(fileExtension)) {
+          final configFile =
+              File(f.path.replaceAll(fileExtension, fileConfigExtension));
+          var configPath;
+          if (configFile.existsSync()) {
+            final configContents = configFile.readAsStringSync();
+            final configJson =
+                json.decode(configContents) as Map<String, dynamic>;
+
+            configPath = configJson['path'] as String;
+          }
+
           final file = File(f.path);
-          final dartPath = f.path.replaceFirst(_srcDir, _distDir).replaceAll(fileExtension, '.dart');
-          final factoryPath = f.path.replaceFirst(_srcDir, _factoryOutput).replaceAll(fileExtension, '.dart');
+
+          final dartPath = f.path
+              .replaceFirst(_srcDir, _distDir)
+              .replaceAll(fileExtension, '.dart');
+
+          configPath = f.path
+              .replaceFirst(_srcDir, configPath)
+              .replaceAll(fileExtension, '.dart');
+          final factoryPath = f.path
+              .replaceFirst(_srcDir, _factoryOutput)
+              .replaceAll(fileExtension, '.dart');
 
           final basenameString = path.basename(f.path).split('.');
           final fileName = basenameString.first;
-          final jsonMap = json.decode(file.readAsStringSync()) as Map<String, dynamic>;
-          final relative = dartPath.replaceFirst(_distDir + path.separator, '').replaceAll(path.separator, '/');
+          final jsonMap =
+              json.decode(file.readAsStringSync()) as Map<String, dynamic>;
+          final relative = dartPath
+              .replaceFirst(_distDir + path.separator, '')
+              .replaceAll(path.separator, '/');
+          print("relative path : $relative");
           final jsonModel = JsonModel.fromMap(
             fileName,
             jsonMap,
             relativePath: relative,
             packageName: _options.getOption<String>(kPackageName).value,
-            indexPath: path.join(_distDir.replaceAll('./lib/', ''), 'index.dart'),
+            indexPath:
+                path.join(_distDir.replaceAll('./lib/', ''), 'index.dart'),
           );
+          jsonModel.imports = '''
+import 'package:quiver/core.dart';
+import '../../../../../core/domain/entity/entity.dart';
+''';
 
-          File(dartPath)
+          File(configPath ?? dartPath)
             ..createSync(recursive: true)
             ..writeAsStringSync(modelFromJsonModel(jsonModel));
 
@@ -67,18 +98,19 @@ class JsonModelRunner {
               ..writeAsStringSync(factoryFromJsonModel(jsonModel));
           }
 
-         // indexFile += "export '$relative';\n";
+          indexFile += "export '$relative';\n";
         }
       }
     });
 
     if (indexFile.isNotEmpty) {
       if (_createFactories) {
-        File(path.join(_factoryOutput, 'index.dart')).writeAsStringSync(indexFile);
+        File(path.join(_factoryOutput, 'index.dart'))
+            .writeAsStringSync(indexFile);
       }
 
       // * The models index file has some helper methods
-      indexFile += '''
+      indexFile = '''
 import 'package:quiver/core.dart';
 
 T? checkOptional<T>(Optional<T?>? optional, T? Function()? def) {
@@ -92,8 +124,11 @@ T? checkOptional<T>(Optional<T?>? optional, T? Function()? def) {
   return null;
 }
 ''';
-
-      File(path.join(_distDir, 'index.dart')).writeAsStringSync(indexFile);
+      
+    
+      File(path.join('./project/core/domain/entity', 'entity.dart'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync(indexFile);
     }
     return indexFile.isNotEmpty;
   }
