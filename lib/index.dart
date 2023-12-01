@@ -67,7 +67,7 @@ class JsonModelRunner {
               ..writeAsStringSync(factoryFromJsonModel(jsonModel));
           }
 
-          indexFile += "export '$relative';\n";
+         // indexFile += "export '$relative';\n";
         }
       }
     });
